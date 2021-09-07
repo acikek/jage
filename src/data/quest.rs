@@ -57,7 +57,7 @@ pub fn compare_map_bool(m: &HashMap<String, bool>, o: Option<&Vec<String>>) -> b
     true
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 #[serde(rename_all = "snake_case")]
 pub enum Condition {
     Currency(f64),

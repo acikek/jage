@@ -12,7 +12,7 @@ use super::inventory::Currency;
 use super::time::GameTime;
 use super::super::input::controller::InputController;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct Coordinates {
     pub x: usize,
     pub y: usize
@@ -76,38 +76,38 @@ impl House {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct Inn {
     cost: usize
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct Tavern {
     name: String,
     shop: Vec<String>,
     quests: Vec<String>
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct Shop {
     name: String,
     items: Vec<String>
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct Palace {
     name: String,
     ruler: Character
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct TownData {
     houses: Vec<String>,
     inn: Inn,
     tavern: Tavern
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct CityData {
     pub houses: Vec<String>,
     pub inn: Inn,
@@ -115,7 +115,7 @@ pub struct CityData {
     pub shops: Vec<Shop>
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct CapitalData {
     pub houses: Vec<String>,
     pub inn: Inn,
@@ -124,7 +124,7 @@ pub struct CapitalData {
     pub palace: Palace
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 #[serde(rename_all = "snake_case")]
 pub enum LocationType {
     Town(TownData),
@@ -136,7 +136,7 @@ pub enum LocationType {
     Trader
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct Location {
     #[serde(alias = "pos")]
     pub position: Coordinates,

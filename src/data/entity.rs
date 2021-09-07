@@ -48,25 +48,25 @@ pub struct Entity {
     drops: Vec<String>
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct StaticInteraction {
     pub line: String
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct DynamicInteraction {
     pub line: String,
     pub choices: Vec<DynamicChoice>
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct DynamicChoice {
     pub response: String,
     pub interaction: InteractionType,
     pub conditions: Option<Vec<Condition>>
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 #[serde(rename_all = "snake_case")]
 pub enum InteractionType {
     Static(StaticInteraction),
@@ -112,7 +112,7 @@ impl InteractionType {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct Character {
     pub name: String,
     pub description: String,

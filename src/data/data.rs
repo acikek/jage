@@ -3,6 +3,7 @@ extern crate serde;
 use serde::{Deserialize, Serialize};
 
 use std::collections::HashMap;
+use std::rc::Rc;
 
 use super::config::Config;
 use super::entity::{Player, PlayerStatus};
@@ -52,14 +53,18 @@ impl GameData {
         self.locations.get(&self.global.player.location).unwrap()
     }
 
-    pub fn match_location(&self, matcher: &String) -> Option<(&Location, &String)> {
+    pub fn match_location(&self, matcher: &String) -> Result<(Location, String), &str> {
         for l in &self.locations {
-            if l.0 == matcher || l.1.name.to_lowercase() == matcher.to_lowercase() {
-                return Some((&l.1, l.0))
+            if l.0 == &matcher.to_lowercase() || l.1.name.to_lowercase() == matcher.to_lowercase() {
+                if l.0 == &self.global.player.location {
+                    return Err("That's your current location.")
+                } else {
+                    return Ok((l.1.clone(), l.0.clone()))
+                }
             }
         }
 
-        None
+        Err("That's not a valid location.")
     }
 
     pub fn travel(&mut self, id: &String, next: &Location, input: &mut InputController) {
@@ -94,7 +99,9 @@ impl GameData {
                     self.global.player.stats.reputation.insert(id.clone(), entry.1);
                 }
 
-                println!("{}", entry.0)
+                println!("\n{}\n{}", entry.0, self.global.time.display());
+
+                self.global.player.location = id.clone();
             },
             None => ()
         }

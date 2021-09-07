@@ -41,7 +41,7 @@ impl Currency {
     }
 
     pub fn display(n: f64, game: &GameData) -> String {
-        format!("{}{}", n, game.config.world.currency.symbol)
+        format!("{:.2}{}", n, game.config.world.currency.symbol)
     }
 }
 

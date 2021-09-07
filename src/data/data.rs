@@ -54,6 +54,8 @@ impl GameData {
     }
 
     pub fn match_location(&self, matcher: &String) -> Result<(Location, String), &str> {
+        // To ensure that the immutable references die upon function return, these clones are required.
+        // Otherwise, it wreaks havoc on the borrow checker (usually called before mutable calls.)
         for l in &self.locations {
             if l.0 == &matcher.to_lowercase() || l.1.name.to_lowercase() == matcher.to_lowercase() {
                 if l.0 == &self.global.player.location {

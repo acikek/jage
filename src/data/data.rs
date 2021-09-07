@@ -52,56 +52,51 @@ impl GameData {
         self.locations.get(&self.global.player.location).unwrap()
     }
 
-    pub fn match_location(&self, matcher: &String) -> Option<&Location> {
+    pub fn match_location(&self, matcher: &String) -> Option<(&Location, &String)> {
         for l in &self.locations {
             if l.0 == matcher || l.1.name.to_lowercase() == matcher.to_lowercase() {
-                return Some(&l.1)
+                return Some((&l.1, l.0))
             }
         }
 
         None
     }
 
-    pub fn travel(&mut self, location: &String, input: &mut InputController) {
-        match self.match_location(location) {
-            Some(next) => {
-                let current = self.location();
-                let data = current.travel_prompt(&next, self);
+    pub fn travel(&mut self, id: &String, next: &Location, input: &mut InputController) {
+        let current = self.location();
+        let data = current.travel_prompt(&next, self);
 
-                let choices = vec!["Ride carriage", "Walk"].iter()
-                    .map(|s| String::from(*s))
-                    .collect::<Vec<String>>();
+        let choices = vec!["Ride carriage", "Walk"].iter()
+            .map(|s| String::from(*s))
+            .collect::<Vec<String>>();
 
-                let result = input.choice(data.0.as_str(), choices, "You decided not to travel.");
+        let result = input.choice(data.0.as_str(), choices, "You decided not to travel.");
 
-                match result {
-                    Some(d) => {
-                        match d.1 {
-                            0 => {
-                                match self.global.player.inventory.currency.take(data.1, &self.config.world.currency.plural) {
-                                    Ok(_) => println!("You paid the fee. You now have {}.", Currency::display(self.global.player.inventory.currency.value, self)),
-                                    Err(e) => println!("{}", e)
-                                }
-                            }
-                            1 => {
-                                self.global.time.advance(data.2);
-                                println!("You decided to walk.");
-                            }
-                            _ => ()
+        match result {
+            Some(d) => {
+                match d.1 {
+                    0 => {
+                        match self.global.player.inventory.currency.take(data.1, &self.config.world.currency.plural) {
+                            Ok(_) => println!("You paid the fee. You now have {}.", Currency::display(self.global.player.inventory.currency.value, self)),
+                            Err(e) => println!("{}", e)
                         }
-
-                        let entry = next.entry(location, &self.global.player.stats.reputation);
-                        
-                        if entry.2 {
-                            self.global.player.stats.reputation.insert(location.clone(), entry.1);
-                        }
-
-                        println!("{}", entry.0)
-                    },
-                    None => ()
+                    }
+                    1 => {
+                        self.global.time.advance(data.2);
+                        println!("You decided to walk.");
+                    }
+                    _ => ()
                 }
+
+                let entry = next.entry(id, &self.global.player.stats.reputation);
+                
+                if entry.2 {
+                    self.global.player.stats.reputation.insert(id.clone(), entry.1);
+                }
+
+                println!("{}", entry.0)
             },
-            None => println!("That location does not exist.")
+            None => ()
         }
     }
 

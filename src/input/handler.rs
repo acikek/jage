@@ -54,7 +54,12 @@ pub fn handler(game: &mut GameData, input: &mut InputController) {
                         match cmd {
                             "travel" => {
                                 if args.check(1) {
-                                    game.travel(&args.input, input)
+                                    match game.match_location(&args.input) {
+                                        Some(d) => {
+                                            game.travel(d.1, d.0, input)
+                                        }
+                                        None => println!("That's not a valid location.")
+                                    }
                                 } else {
                                     println!("You need to provide a location.");
                                 }

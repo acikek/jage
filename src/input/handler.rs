@@ -8,10 +8,16 @@ use super::controller::InputController;
 pub fn handler(game: &mut GameData, input: &mut InputController) {
     use LocationType::*;
     use PlayerStatus::*;
+    
+    let mut exiting = false;
 
     loop {
         match input.read() {
             Some(l) => {
+                if exiting {
+                    exiting = false;
+                }
+
                 let line = l.trim();
                 let args = Args::parse(&line);
 
@@ -29,9 +35,12 @@ pub fn handler(game: &mut GameData, input: &mut InputController) {
 
                         match cmd {
                             "talk" => {
-                                match input.choice("Who will you talk to?", house.list()) {
+                                match input.choice("Who will you talk to?", house.list(), "You decided not to talk to anyone.") {
                                     Some(d) => {
-                                        println!("\"{}\"", house.talk(d.1, game, input));
+                                        match house.talk(d.1, game, input) {
+                                            Some(s) => println!("\"{}\"", s),
+                                            None => ()
+                                        }
                                     }
                                     None => ()
                                 }   
@@ -41,8 +50,17 @@ pub fn handler(game: &mut GameData, input: &mut InputController) {
                             _ => e
                         }
                     }
-                    Location(loc) => {
+                    Location => {
                         match cmd {
+                            "travel" => {
+                                if args.check(1) {
+                                    game.travel(&args.input, input)
+                                } else {
+                                    println!("You need to provide a location.");
+                                }
+
+                                Ok(())
+                            }
                             _ => e
                         }
                     }
@@ -67,7 +85,14 @@ pub fn handler(game: &mut GameData, input: &mut InputController) {
 
                 println!();
             },
-            None => break
+            None => {
+                if !exiting {
+                    println!("Press Ctrl+C again to exit.\nAll your progress will be saved.\n");
+                    exiting = true;
+                } else {
+                    break;
+                }
+            }
         }
     }
 }

@@ -59,4 +59,21 @@ impl GameTime {
             self.day
         )
     }
+
+    pub fn duration(d: usize) -> String {
+        if d < Self::HR_INTERVAL {
+            format!("{} minutes", d)
+        } else if d < Self::DAY_INTERVAL {
+            format!("{} hours and {} minutes", 
+                d / Self::HR_INTERVAL,
+                d % Self::HR_INTERVAL
+            )
+        } else {
+            format!("{} days, {} hours, and {} minutes",
+                d / Self::DAY_INTERVAL,
+                d / Self::HR_INTERVAL,
+                d % Self::HR_INTERVAL
+            )
+        }
+    }
 }

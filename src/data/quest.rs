@@ -60,7 +60,7 @@ pub fn compare_map_bool(m: &HashMap<String, bool>, o: Option<&Vec<String>>) -> b
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Condition {
-    Currency(usize),
+    Currency(f64),
     Health(usize),
     Items(HashMap<String, usize>),
     Reputation(HashMap<String, usize>),
@@ -74,7 +74,7 @@ impl Condition {
         use Condition::*;
 
         match self {
-            Currency(n) => player.inventory.currency > *n,
+            Currency(n) => player.inventory.currency.value > *n,
             Health(n) => player.health.value > *n,
             Items(m) => compare_map(m, &player.inventory.items),
             Reputation(m) => compare_map(m, &player.stats.reputation),

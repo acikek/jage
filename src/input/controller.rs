@@ -31,7 +31,7 @@ impl InputController {
         self.read()
     }
     
-    pub fn choice(&mut self, text: &str, options: Vec<String>) -> Option<(String, usize)> {
+    pub fn choice(&mut self, text: &str, options: Vec<String>, leave: &str) -> Option<(String, usize)> {
         let ops = options.iter()
             .enumerate()
             .map(|(i, o)| format!("{}) {}", i + 1, o))
@@ -60,7 +60,7 @@ impl InputController {
                     }
                 }
                 _ => {
-                    println!("You decided not to choose.");
+                    println!("{}", leave);
                     return None
                 }
             }

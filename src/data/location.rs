@@ -4,8 +4,12 @@ extern crate serde;
 use rand::seq::SliceRandom;
 use serde::Deserialize;
 
+use std::collections::HashMap;
+
 use super::data::GameData;
 use super::entity::Character;
+use super::inventory::Currency;
+use super::time::GameTime;
 use super::super::input::controller::InputController;
 
 #[derive(Debug, Deserialize)]
@@ -43,6 +47,7 @@ pub enum HouseResident {
 
 #[derive(Debug, Deserialize)]
 pub struct House {
+    name: String,
     residents: Vec<HouseResident>
 }
 
@@ -58,12 +63,15 @@ impl House {
             .collect::<Vec<String>>()
     }
 
-    pub fn talk(&self, resident: usize, game: &GameData, input: &mut InputController) -> String {
+    pub fn talk(&self, resident: usize, game: &GameData, input: &mut InputController) -> Option<String> {
         use HouseResident::*;
 
         match &self.residents[resident] {
-            Citizen(c) => c.dialogue.choose(&mut rand::thread_rng()).unwrap().clone(),
-            Character(c) => c.interaction.interact(game, input).unwrap()
+            Citizen(c) => match c.dialogue.choose(&mut rand::thread_rng()) {
+                Some(s) => Some(s.clone()),
+                None => None
+            },
+            Character(c) => c.interaction.interact(game, input)
         }
     }
 }
@@ -177,25 +185,25 @@ impl ReputationLevel {
 }
 
 impl Location {
-    pub fn reputation(id: &String, data: &mut GameData) -> (usize, bool) {
-        if !data.global.player.stats.reputation.contains_key(id) {
-            let value = match data.locations.get(id).unwrap().entry {
+    pub fn reputation(&self, id: &String, reputation: &HashMap<String, usize>) -> (usize, bool) {
+        if !reputation.contains_key(id) {
+            let value = match self.entry {
                 Some(n) => n,
                 None => 50
             };
 
-            data.global.player.stats.reputation.insert(id.clone(), value);
+            //reputation.insert(id.clone(), value);
             (value, true)
         } else {
-            (*data.global.player.stats.reputation.get(id).unwrap(), false)
+            (*reputation.get(id).unwrap(), false)
         }
     }
 
-    pub fn entry(id: String, data: &mut GameData) -> String {
-        let rep = Self::reputation(&id, data);
+    pub fn entry(&self, id: &String, reputation: &HashMap<String, usize>) -> (String, usize, bool) {
+        let rep = self.reputation(&id, reputation);
 
         let first = format!("You're entering {}{}", 
-            data.locations.get(&id).unwrap().name,
+            self.name,
             if rep.1 { " for the first time." } else { "." }
         );
 
@@ -204,6 +212,21 @@ impl Location {
             ReputationLevel::name(ReputationLevel::value(rep.0))
         );
 
-        format!("{} {}", first, second)
+        (format!("{} {}", first, second), rep.0, rep.1)
+    }
+
+    pub fn travel_prompt(&self, next: &Location, game: &GameData) -> (String, f64, usize) {
+        let dist = self.position.dist(&next.position);
+        let cost = dist * game.config.world.currency.dist_cost as f64;
+        let time = (dist * 20.0) as usize;
+
+        let prompt = format!("You are traveling from {} to {}.\n\nYou can ride the carriage, costing {}, or...\nYou can walk, taking {}.",
+            self.name,
+            next.name,
+            Currency::display(cost, game),
+            GameTime::duration(time)
+        );
+
+        (prompt, cost, time)
     }
 }

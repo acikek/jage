@@ -26,14 +26,9 @@ pub struct World {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct Game {
+pub struct Config {
+    pub metadata: Metadata,
     pub prompt: String,
     pub exposition: String,
     pub world: World
-}
-
-#[derive(Debug, Deserialize)]
-pub struct Config {
-    pub metadata: Metadata,
-    pub game: Game
 }

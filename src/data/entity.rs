@@ -98,7 +98,7 @@ impl InteractionType {
 
                 println!("\"{}\"", i.line);
 
-                let response = input.choice("What will you say?", responses);
+                let response = input.choice("What will you say?", responses, "You left the conversation.");
 
                 match response {
                     Some(d) => {
@@ -125,7 +125,7 @@ pub struct Character {
 pub enum PlayerStatus {
     Combat(HashMap<String, usize>),
     House(String),
-    Location(String),
+    Location,
     #[serde(alias = "none")]
     Idle
 }

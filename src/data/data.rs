@@ -6,10 +6,11 @@ use std::collections::HashMap;
 
 use super::config::Config;
 use super::entity::{Player, PlayerStatus};
-use super::inventory::Item;
+use super::inventory::{Item, Currency};
 use super::location::{Location, House};
 use super::quest::Quest;
 use super::time::GameTime;
+use super::super::input::controller::InputController;
 use super::super::fs::fs::Filesystem;
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -49,6 +50,59 @@ impl GameData {
 
     pub fn location(&self) -> &Location {
         self.locations.get(&self.global.player.location).unwrap()
+    }
+
+    pub fn match_location(&self, matcher: &String) -> Option<&Location> {
+        for l in &self.locations {
+            if l.0 == matcher || l.1.name.to_lowercase() == matcher.to_lowercase() {
+                return Some(&l.1)
+            }
+        }
+
+        None
+    }
+
+    pub fn travel(&mut self, location: &String, input: &mut InputController) {
+        match self.match_location(location) {
+            Some(next) => {
+                let current = self.location();
+                let data = current.travel_prompt(&next, self);
+
+                let choices = vec!["Ride carriage", "Walk"].iter()
+                    .map(|s| String::from(*s))
+                    .collect::<Vec<String>>();
+
+                let result = input.choice(data.0.as_str(), choices, "You decided not to travel.");
+
+                match result {
+                    Some(d) => {
+                        match d.1 {
+                            0 => {
+                                match self.global.player.inventory.currency.take(data.1, &self.config.world.currency.plural) {
+                                    Ok(_) => println!("You paid the fee. You now have {}.", Currency::display(self.global.player.inventory.currency.value, self)),
+                                    Err(e) => println!("{}", e)
+                                }
+                            }
+                            1 => {
+                                self.global.time.advance(data.2);
+                                println!("You decided to walk.");
+                            }
+                            _ => ()
+                        }
+
+                        let entry = next.entry(location, &self.global.player.stats.reputation);
+                        
+                        if entry.2 {
+                            self.global.player.stats.reputation.insert(location.clone(), entry.1);
+                        }
+
+                        println!("{}", entry.0)
+                    },
+                    None => ()
+                }
+            },
+            None => println!("That location does not exist.")
+        }
     }
 
     pub fn house(&self) -> Option<&House> {

@@ -4,11 +4,12 @@ extern crate serde_yaml;
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::io::Error;
-use std::fs::{read_to_string, read_dir, DirEntry};
+use std::fs::{read_to_string, read_dir, write, DirEntry};
 use std::path::PathBuf;
 
 use serde::de::DeserializeOwned;
-use serde_yaml::from_str;
+use serde::ser::Serialize;
+use serde_yaml::{from_str, to_string};
 
 pub struct Filesystem {
     root: PathBuf
@@ -97,5 +98,16 @@ impl Filesystem {
     /// Parses the 'all.yml' data style.
     pub fn parse_all<T: DeserializeOwned>(data: String) -> Result<HashMap<String, T>, serde_yaml::Error> {
         from_str::<HashMap<String, T>>(data.as_str())
+    }
+
+    pub fn encode<T: Serialize>(data: &T) -> Result<String, serde_yaml::Error> {
+        to_string(data)
+    }
+
+    pub fn write<T: Serialize>(&self, data: &T, path: &String) -> Result<(), Box<dyn std::error::Error>> {
+        let encoded = Self::encode(data)?;
+        write(self.get(path), encoded)?;
+
+        Ok(())
     }
 }

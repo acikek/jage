@@ -2,7 +2,9 @@ extern crate serde;
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize, Serialize)]
+use std::fmt::Display;
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct GameTime {
     pub day: usize,
     pub min: usize,
@@ -53,13 +55,6 @@ impl GameTime {
         )
     }
 
-    pub fn display(&self) -> String {
-        format!("The time is {}. It is day {} of your journey.",
-            self.display_time(),
-            self.day
-        )
-    }
-
     pub fn duration(d: usize) -> String {
         if d < Self::HR_INTERVAL {
             format!("{} minutes", d)
@@ -75,5 +70,14 @@ impl GameTime {
                 d % Self::HR_INTERVAL
             )
         }
+    }
+}
+
+impl Display for GameTime {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        write!(fmt, "The time is {}. It is day {} of your journey.",
+            self.display_time(),
+            self.day
+        )  
     }
 }

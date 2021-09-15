@@ -6,6 +6,7 @@ use serde::Deserialize;
 
 use std::collections::HashMap;
 
+use super::common::{InteractionLine, Named};
 use super::data::GameData;
 use super::entity::Character;
 use super::inventory::Currency;
@@ -31,24 +32,31 @@ impl Coordinates {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct Citizen {
     pub name: String,
     #[serde(alias = "lines")]
     pub dialogue: Vec<String>
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 #[serde(rename_all = "snake_case")]
 pub enum HouseResident {
     Citizen(Citizen),
     Character(Character)
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct House {
-    name: String,
-    residents: Vec<HouseResident>
+    pub name: String,
+    pub entry: Vec<InteractionLine>,
+    pub residents: Vec<HouseResident>
+}
+
+impl Named for House {
+    fn name(&self) -> String {
+        self.name.clone()
+    }
 }
 
 impl House {
@@ -63,7 +71,7 @@ impl House {
             .collect::<Vec<String>>()
     }
 
-    pub fn talk(&self, resident: usize, game: &GameData, input: &mut InputController) -> Option<String> {
+    pub fn talk(&self, resident: usize, game: &mut GameData, input: &mut InputController) -> Option<String> {
         use HouseResident::*;
 
         match &self.residents[resident] {
@@ -149,6 +157,12 @@ pub struct Location {
     pub quests: Option<Vec<String>>
 }
 
+impl Named for Location {
+    fn name(&self) -> String {
+        self.name.clone()
+    }
+}
+
 pub enum ReputationLevel {
     Lowest,
     Low,
@@ -229,4 +243,22 @@ impl Location {
 
         (prompt, cost, time)
     }
+
+    pub fn houses(&self, game: &GameData) -> Option<Vec<(String, String)>> {
+        use LocationType::*;
+
+        let houses = match &self.l_type {
+            Town(t) => &t.houses,
+            City(c) => &c.houses,
+            Capital(c) => &c.houses,
+            _ => return None
+        };
+
+        Some(houses.iter()
+            .map(|h| {
+                let house = game.houses.get(h).unwrap();
+                (h.clone(), house.name.clone())
+            })
+            .collect::<Vec<(String, String)>>())
+    }  
 }

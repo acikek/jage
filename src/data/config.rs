@@ -3,14 +3,14 @@ extern crate serde_yaml;
 
 use serde::Deserialize;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct Metadata {
     pub title: String,
     pub description: String,
     pub authors: Vec<String>
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct CurrencyData {
     pub singular: String,
     pub plural: String,
@@ -18,14 +18,14 @@ pub struct CurrencyData {
     pub dist_cost: usize
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct World {
     pub name: String,
     pub description: String,
     pub currency: CurrencyData
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct Config {
     pub metadata: Metadata,
     pub prompt: String,

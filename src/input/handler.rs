@@ -30,20 +30,27 @@ pub fn handler(game: &mut GameData, input: &mut InputController) {
                             _ => e
                         }
                     }
-                    House(h) => {
-                        let house = game.house().unwrap();
+                    House(_) => {
+                        let house = game.house().unwrap().clone();
 
                         match cmd {
                             "talk" => {
                                 match input.choice("Who will you talk to?", house.list(), "You decided not to talk to anyone.") {
                                     Some(d) => {
                                         match house.talk(d.1, game, input) {
-                                            Some(s) => println!("\"{}\"", s),
+                                            Some(s) => println!("{}", s),
                                             None => ()
                                         }
                                     }
                                     None => ()
                                 }   
+
+                                Ok(())
+                            }
+                            "leave" => {
+                                game.global.player.status = PlayerStatus::Location;
+
+                                println!("You left the house.");
 
                                 Ok(())
                             }
@@ -54,17 +61,29 @@ pub fn handler(game: &mut GameData, input: &mut InputController) {
                         match cmd {
                             "travel" => {
                                 if args.check(1) {
-                                    let matched = game.match_location(&args.input);
+                                    let matched = game.match_best(&args.input, &game.locations);
 
                                     match matched {
-                                        Ok(d) => game.travel(&d.1, &d.0, input),
-                                        Err(e) => println!("{}", e)
+                                        Some(d) => game.travel(&d.0, &d.1, input),
+                                        None => println!("That's not a valid location.")
                                     }
                                 } else {
                                     println!("You need to provide a location.");
                                 }
 
                                 Ok(())
+                            }
+                            "visit" => {
+                                use LocationType::*;
+
+                                match game.location().l_type {
+                                    Town(_) | City(_) | Capital(_) => {
+                                        game.visit(input);
+
+                                        Ok(())
+                                    }
+                                    _ => e
+                                }
                             }
                             _ => e
                         }
@@ -80,9 +99,17 @@ pub fn handler(game: &mut GameData, input: &mut InputController) {
                     Ok(_) => (),
                     Err(e) => {
                         match cmd {
-                            "quests" => {
-                                println!("{}", game.quest_book())
+                            "dbg" => println!("\n{:#?}", game),
+                            "log" => println!("\n{}", game.global.player.stats.log(false)),
+                            "recent" => println!("\n{}", game.global.player.stats.log(true)),
+                            "quest" => {
+                                if args.check(1) {
+
+                                } else {
+                                    println!("You need to provide a quest.");
+                                }
                             }
+                            "quests" => println!("\n{}", game.quest_book()),
                             _ => println!("{}", e)
                         }
                     }

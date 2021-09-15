@@ -3,9 +3,9 @@ extern crate serde;
 use serde::{Deserialize, Serialize};
 
 use std::collections::HashMap;
-use std::rc::Rc;
 
 use super::config::Config;
+use super::common::{InteractionLine, Named};
 use super::entity::{Player, PlayerStatus};
 use super::inventory::{Item, Currency};
 use super::location::{Location, House};
@@ -53,20 +53,14 @@ impl GameData {
         self.locations.get(&self.global.player.location).unwrap()
     }
 
-    pub fn match_location(&self, matcher: &String) -> Result<(Location, String), &str> {
-        // To ensure that the immutable references die upon function return, these clones are required.
-        // Otherwise, it wreaks havoc on the borrow checker (usually called before mutable calls.)
-        for l in &self.locations {
-            if l.0 == &matcher.to_lowercase() || l.1.name.to_lowercase() == matcher.to_lowercase() {
-                if l.0 == &self.global.player.location {
-                    return Err("That's your current location.")
-                } else {
-                    return Ok((l.1.clone(), l.0.clone()))
-                }
+    pub fn match_best<T: Named + Clone>(&self, matcher: &String, m: &HashMap<String, T>) -> Option<(String, T)> {
+        for (k, v) in m {
+            if k == &matcher.to_lowercase() || v.name().to_lowercase() == matcher.to_lowercase() {
+                return Some((k.clone(), (*v).clone()))
             }
         }
-
-        Err("That's not a valid location.")
+        
+        None
     }
 
     pub fn travel(&mut self, id: &String, next: &Location, input: &mut InputController) {
@@ -83,7 +77,7 @@ impl GameData {
             Some(d) => {
                 match d.1 {
                     0 => {
-                        match self.global.player.inventory.currency.take(data.1, &self.config.world.currency.plural) {
+                        match self.global.player.inventory.currency.add(-data.1, Some(&self.config.world.currency.plural)) {
                             Ok(_) => println!("You paid the fee. You now have {}.", Currency::display(self.global.player.inventory.currency.value, self)),
                             Err(e) => println!("{}", e)
                         }
@@ -101,7 +95,7 @@ impl GameData {
                     self.global.player.stats.reputation.insert(id.clone(), entry.1);
                 }
 
-                println!("\n{}\n{}", entry.0, self.global.time.display());
+                println!("\n{}\n{}", entry.0, self.global.time);
 
                 self.global.player.location = id.clone();
             },
@@ -117,37 +111,123 @@ impl GameData {
         }
     }
 
-    pub fn quests(&self) -> Option<Vec<(&Quest, &String, bool)>> {
-        match &self.global.player.quests.assigned {
-            Some(v) => {
-                Some(v.iter()
-                    .map(|s| {
-                        let quest = self.quests.get(s).unwrap();
-                        let completed = quest.check(&self.global.player);
+    pub fn visit(&mut self, input: &mut InputController) {
+        let houses = self.location().houses(self).unwrap();
 
-                        (quest, s, completed)
-                    })
-                    .collect::<Vec<(&Quest, &String, bool)>>()
+        let names = houses.iter()
+            .map(|d| d.1.clone())
+            .collect::<Vec<String>>();
+
+        match input.choice("Which house will you visit?", names, "You decided not to visit anyone.") {
+            Some(d) => {
+                let house = &houses[d.1];
+                self.global.player.status = PlayerStatus::House(house.0.clone());
+
+                println!("You entered the {}.\n\n{}", 
+                    house.1,
+                    InteractionLine::all(&self.house().unwrap().entry)
+                );
+            }
+            None => ()
+        }
+    }
+
+    pub fn finished_quests(&self) -> Option<Vec<String>> {
+        match &self.global.player.quests.assigned.clone() {
+            Some(v) => {
+                Some(
+                    v.iter()
+                        .map(|q| q.clone())
+                        .filter(|q| self.quests.get(q).unwrap().check(self))
+                        .collect::<Vec<String>>()
                 )
             },
             None => None
         }
     }
 
-    pub fn quest_book(&self) -> String {
-        match self.quests() {
+    /*pub fn sort_quests(&mut self) {
+        let completed: Vec<bool> = match &self.global.player.quests.assigned {
             Some(v) => {
-                format!("\n{}",
+                v.iter()
+                    .map(|q| {
+                        let quest = self.quests.get(&q.clone()).unwrap().clone();
+                        quest.check(self)
+                    })
+                    .collect::<Vec<bool>>()
+            }
+            None => return
+        };
+
+        if completed.len() > 0 {
+            if let Some(v) = &mut self.global.player.quests.assigned {
+                for (i, q) in v.clone().iter().enumerate() {
+                    if completed[i] {
+                        v.retain(|s| s != &q.clone());
+
+                        println!("You have completed the quest \"{}\"!", self.quests.get(&q.clone()).unwrap().clone().name);
+                        
+                        if let Some(c) = &mut self.global.player.quests.completed {
+                            c.push(q.clone());
+                        } else {
+                            self.global.player.quests.completed = Some(vec![q.clone()]);
+                        }
+                    }
+                }
+            }
+        }
+    }*/
+
+    /*pub fn quest_list(&mut self, v: Option<Vec(Quest, String)>>) -> String {
+
+    }*/
+
+    pub fn quest_list(&self, v: &Option<Vec<String>>) -> Option<Vec<(Quest, String)>> {
+        match &v {
+            Some(v) => {
+                Some(
                     v.iter()
+                        .map(|q| {
+                            let quest = self.quests.get(q).unwrap();
+
+                            (quest.clone(), q.clone())
+                        })
+                        .collect::<Vec<(Quest, String)>>()
+                )
+            }
+            None => None
+        }
+    }
+
+    pub fn display_quests(&self, v: &Option<Vec<(Quest, String)>>, show_completed: bool) -> String {
+        match v {
+            Some(q) => {
+                format!("\n{}",
+                    q.iter()
                         .map(|d| format!("- {}{}",
                             d.0.name,
-                            if d.2 { String::from(" ✔") } else { String::new() }
+                            if show_completed {
+                                if d.0.check(self) {
+                                    String::from(" ✔")
+                                } else {
+                                    String::new()
+                                }
+                            } else {
+                                String::new()
+                            }
                         ))
                         .collect::<Vec<String>>()
                         .join("\n")
                 )
-            },
-            None => String::from("You don't have any assigned quests.")
+            }
+            None => String::from("\nNothing here...")
         }
+    }
+
+    pub fn quest_book(&mut self) -> String {
+        format!("Assigned:\n{}\n\nCompleted:\n{}",
+            self.display_quests(&self.quest_list(&self.global.player.quests.assigned), true),
+            self.display_quests(&self.quest_list(&self.global.player.quests.completed), false)
+        )
     }
 }

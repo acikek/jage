@@ -231,7 +231,7 @@ pub fn display_quest_map(m: &HashMap<String, bool>, header: &str, game: &GameDat
             let quest = game.quests.get(k).unwrap();
 
             format!("{}{}", 
-                if *v { String::from("NOT") } else { String::new() },
+                if *v { String::new() } else { String::from("NOT ") },
                 quest.name
             )
         })
@@ -282,8 +282,8 @@ impl Condition {
         use Condition::*;
 
         match self {
-            Currency(n) => format!("At least {}", super::inventory::Currency::display(*n, game)),
-            Health(n) => format!("At least {} health", n),
+            Currency(n) => format!("Have at least {}", super::inventory::Currency::display(*n, game)),
+            Health(n) => format!("Have at least {} health", n),
             Items(m) => {
                 format!("Have {}", m.iter()
                     .map(|(k, v)| {
@@ -303,19 +303,18 @@ impl Condition {
                     .join(", "))
             },
             Defeated(_) => {
-                format!("Defeated (todo)")
+                format!("Defeat (todo)")
             },
-            Completed(m) => display_quest_map(m, "Completed", game),
-            Finished(m) => display_quest_map(m, "Finished", game),
-            Assigned(m) => display_quest_map(m, "Completed", game),
+            Completed(m) => display_quest_map(m, "Complete", game),
+            Finished(m) => display_quest_map(m, "Finish", game),
+            Assigned(m) => display_quest_map(m, "Be assigned", game),
             Marks(_) => String::new()
         }
     }
 
-    pub fn display_all(v: Vec<Condition>, game: &GameData) -> String {
+    pub fn display_all(v: &Vec<Condition>, game: &GameData) -> Vec<String> {
         v.iter()
             .map(|c| c.display(game))
             .collect::<Vec<String>>()
-            .join("\n")
     }
 }

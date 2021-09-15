@@ -13,6 +13,7 @@ pub enum ItemType {
     Consumable(usize),
     Weapon(usize),
     Armor(usize),
+    Material,
     Special,
 }
 

@@ -58,9 +58,15 @@ impl Filesystem {
         for entry in entries {
             let dir = entry?;
 
+            let s = Self::get_file_name(&dir).ok_or("Invalid file path")?;
             let contents = self.read_path(dir.path())?;
-            let s = Self::get_file_name(dir).ok_or("Invalid file path")?;
 
+            if s == "all" {
+                result.clear();
+                result.insert(s, contents);
+                break;
+            }
+            
             result.insert(s, contents);
         }
 
@@ -69,7 +75,7 @@ impl Filesystem {
 
     /// Returns the filename of a directory as an `Option<String>`.
     /// Note that Rust only supports UTF-8 characters in Strings.
-    pub fn get_file_name(d: DirEntry) -> Option<String> {
+    pub fn get_file_name(d: &DirEntry) -> Option<String> {
         Some(String::from(
             d.path()
                 .file_stem()
@@ -85,6 +91,10 @@ impl Filesystem {
 
     /// Goes through the result of a `Filesystem::read_dir` call and `parse`s each item.
     pub fn parse_map<T: DeserializeOwned>(data: BTreeMap<String, String>) -> Result<HashMap<String, T>, serde_yaml::Error> {
+        if data.contains_key("all") {
+            return Self::parse_all(data.get("all").unwrap().clone())
+        }
+
         let mut result: HashMap<String, T> = HashMap::with_capacity(data.len());
 
         for d in data {

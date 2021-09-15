@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use std::collections::HashMap;
 
+use super::attribute::{Class, Skill};
 use super::config::Config;
 use super::common::{InteractionLine, Named};
 use super::entity::{Player, PlayerStatus};
@@ -23,9 +24,11 @@ pub struct GlobalData {
 #[derive(Debug)]
 pub struct GameData {
     pub config: Config,
+    pub classes: HashMap<String, Class>,
     pub houses: HashMap<String, House>,
     pub items: HashMap<String, Item>,
     pub locations: HashMap<String, Location>,
+    pub skills: HashMap<String, Skill>,
     pub quests: HashMap<String, Quest>,
     pub global: GlobalData
 }
@@ -33,17 +36,21 @@ pub struct GameData {
 impl GameData {
     pub fn from(fs: &Filesystem) -> Result<Self, Box<dyn std::error::Error>> {
         let config = Filesystem::parse(fs.read("jage.yml")?)?;
+        let classes = Filesystem::parse_map(fs.read_dir("classes")?)?;
         let houses = Filesystem::parse_map(fs.read_dir("houses")?)?;
         let items = Filesystem::parse_map(fs.read_dir("items")?)?;
         let locations = Filesystem::parse_map(fs.read_dir("locations")?)?;
+        let skills = Filesystem::parse_map(fs.read_dir("skills")?)?;
         let quests = Filesystem::parse_map(fs.read_dir("quests")?)?;
         let global = Filesystem::parse(fs.read("data/global.yml")?)?;
 
         Ok(Self {
             config,
+            classes,
             houses,
             items,
             locations,
+            skills,
             quests,
             global
         })

@@ -23,4 +23,15 @@ impl Quest {
     pub fn check(&self, game: &GameData) -> bool {
         Condition::check_all(&self.requirements, game)
     }
+
+    pub fn display(&self, game: &GameData) -> String {
+        format!("{}\n\n{}\n\nRequirements:\n{}",
+            self.name,
+            self.description,
+            Condition::display_all(&self.requirements, game).iter()
+                .map(|c| format!("- {}", c))
+                .collect::<Vec<String>>()
+                .join("\n")
+        )
+    }
 }

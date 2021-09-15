@@ -104,7 +104,10 @@ pub fn handler(game: &mut GameData, input: &mut InputController) {
                             "recent" => println!("\n{}", game.global.player.stats.log(true)),
                             "quest" => {
                                 if args.check(1) {
-
+                                    match game.match_best(&args.input, &game.quests) {
+                                        Some(q) => println!("\n{}", q.1.display(game)),
+                                        None => println!("That's not a valid quest.")
+                                    }
                                 } else {
                                     println!("You need to provide a quest.");
                                 }

@@ -11,7 +11,7 @@ use super::common::{InteractionType, Range};
 pub struct Entity {
     health: usize,
     name: String,
-    drops: Vec<String>
+    inventory: Inventory,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -22,9 +22,15 @@ pub struct Character {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct PlayerCombatData {
+    pub entities: HashMap<String, usize>,
+    pub turn: bool
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(rename_all = "snake_case")]
 pub enum PlayerStatus {
-    Combat(HashMap<String, usize>),
+    Combat(PlayerCombatData),
     House(String),
     Location,
     #[serde(alias = "none")]
@@ -85,11 +91,17 @@ impl PlayerStats {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct PlayerVitality {
+    pub health: Range,
+    pub effects: Option<HashMap<String, usize>>
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Player {
     pub name: String,
     pub class: String,
     pub skills: Vec<String>,
-    pub health: Range,
+    pub vitality: PlayerVitality,
     pub status: PlayerStatus,
     pub location: String,
     pub inventory: Inventory,

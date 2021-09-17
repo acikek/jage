@@ -6,13 +6,70 @@ use serde::{Deserialize, Serialize};
 
 use super::common::Named;
 use super::data::GameData;
+use super::entity::Player;
+
+#[derive(Debug, Deserialize, Clone)]
+#[serde(rename_all = "snake_case")]
+pub enum StatusEffectType {
+    Health(isize),
+    Enhance(HashMap<String, isize>)
+}
+
+impl StatusEffectType {
+    pub fn apply(&self, player: &mut Player) {
+        use StatusEffectType::*;
+
+        match &self {
+            Health(n) => { player.vitality.health += *n },
+            Enhance(_) => ()
+        }
+    }
+
+    pub fn apply_all(v: &Vec<StatusEffectType>, player: &mut Player) {
+        for e in v {
+            e.apply(player);
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct StatusEffect {
+    pub name: String,
+    pub description: String,
+    pub cycle: Vec<StatusEffectType>
+}
+
+impl Named for StatusEffect {
+    fn name(&self) -> String {
+        self.name.clone()
+    }
+}
+
+impl StatusEffect {
+    pub fn cycle(&self, player: &mut Player) {
+        StatusEffectType::apply_all(&self.cycle, player);
+    }
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct Consumable {
+    pub restore: usize,
+    pub effect: HashMap<String, usize>
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct Equippable {
+    pub strength: usize,
+    #[serde(alias = "prof")]
+    pub proficiency: Vec<String>
+}
 
 #[derive(Debug, Deserialize, Clone)]
 #[serde(rename_all = "snake_case")]
 pub enum ItemType {
-    Consumable(usize),
-    Weapon(usize),
-    Armor(usize),
+    Consumable(Consumable),
+    Weapon(Equippable),
+    Armor(Equippable),
     Material,
     Special,
 }
@@ -22,9 +79,7 @@ pub struct Item {
     pub name: String,
     pub description: String,
     #[serde(rename = "type")]
-    pub i_type: ItemType,
-    #[serde(alias = "prof")]
-    pub proficiency: Vec<String>
+    pub i_type: ItemType
 }
 
 impl Named for Item {
@@ -59,9 +114,16 @@ impl Currency {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct Equipped {
+    pub weapon: Option<String>,
+    pub armor: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Inventory {
     pub items: HashMap<String, usize>,
-    pub currency: Currency
+    pub currency: Currency,
+    pub equipped: Equipped
 }
 
 impl Inventory {
@@ -87,5 +149,46 @@ impl Inventory {
 
     pub fn get(&self, item: &String) -> Option<&usize> {
         self.items.get(item)
+    }
+
+    pub fn display(&self, game: &GameData) -> Option<Vec<String>> {
+        if self.items.is_empty() {
+            return None;
+        }
+
+        Some(
+            self.items.iter()
+                .map(|(i, v)| {
+                    format!("{} {}", v, game.items.get(i).unwrap().name)
+                })
+                .collect::<Vec<String>>()
+        )
+    }
+
+    pub fn display_line(&self, game: &GameData) -> String {
+        match self.display(game) {
+            Some(v) => v.join(", "),
+            None => String::from("Nothing")
+        }
+    }
+
+    pub fn display_list(&self, game: &GameData) -> String {
+        match self.display(game) {
+            Some(v) => {
+                v.iter()
+                    .map(|i| format!("- {}", i))
+                    .collect::<Vec<String>>()
+                    .join("\n")
+            }
+            None => String::from("Nothing")
+        }
+    }
+
+    pub fn drop(&self, other: &mut Inventory) {
+        other.currency.value += self.currency.value;
+
+        for (i, v) in &self.items {
+            *other.items.get_mut(i).unwrap() += v;
+        }
     }
 }

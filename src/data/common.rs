@@ -22,24 +22,22 @@ pub struct Range {
 }   
 
 impl Range {
-    pub fn set(&mut self, value: usize) {
-        if value <= self.max {
-            self.value = value;
+    pub fn set(&mut self, value: isize) {
+        if value > 0 {
+            self.value += value as usize;
         } else {
-            self.value = self.max;
+            if value.abs() as usize >= self.value {
+                self.value = 0;
+            } else {
+                self.value -= value.abs() as usize;
+            }
         }
     }
 }
 
-impl AddAssign<usize> for Range {
-    fn add_assign(&mut self, value: usize) {
-        self.set(self.value + value);
-    }
-}
-
-impl SubAssign<usize> for Range {
-    fn sub_assign(&mut self, value: usize) {
-        self.set(self.value - value);
+impl AddAssign<isize> for Range {
+    fn add_assign(&mut self, value: isize) {
+        self.set(value);
     }
 }
 
@@ -262,7 +260,7 @@ impl Condition {
 
         match self {
             Currency(n) => player.inventory.currency.value >= *n,
-            Health(n) => player.health.value >= *n,
+            Health(n) => player.vitality.health.value >= *n,
             Items(m) => compare_map(m, &player.inventory.items),
             Reputation(m) => compare_map(m, &player.stats.reputation),
             Defeated(m) => compare_map(m, &player.stats.defeated),

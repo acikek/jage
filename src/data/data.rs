@@ -8,7 +8,7 @@ use super::attribute::{Class, Skill};
 use super::config::Config;
 use super::common::{InteractionLine, Named};
 use super::entity::{Player, PlayerStatus};
-use super::inventory::{Item, Currency};
+use super::inventory::{Item, Currency, StatusEffect};
 use super::location::{Location, House};
 use super::quest::Quest;
 use super::time::GameTime;
@@ -25,6 +25,7 @@ pub struct GlobalData {
 pub struct GameData {
     pub config: Config,
     pub classes: HashMap<String, Class>,
+    pub effects: HashMap<String, StatusEffect>,
     pub houses: HashMap<String, House>,
     pub items: HashMap<String, Item>,
     pub locations: HashMap<String, Location>,
@@ -37,6 +38,7 @@ impl GameData {
     pub fn from(fs: &Filesystem) -> Result<Self, Box<dyn std::error::Error>> {
         let config = Filesystem::parse(fs.read("jage.yml")?)?;
         let classes = Filesystem::parse_map(fs.read_dir("classes")?)?;
+        let effects = Filesystem::parse_map(fs.read_dir("effects")?)?;
         let houses = Filesystem::parse_map(fs.read_dir("houses")?)?;
         let items = Filesystem::parse_map(fs.read_dir("items")?)?;
         let locations = Filesystem::parse_map(fs.read_dir("locations")?)?;
@@ -47,6 +49,7 @@ impl GameData {
         Ok(Self {
             config,
             classes,
+            effects,
             houses,
             items,
             locations,
@@ -153,42 +156,6 @@ impl GameData {
         }
     }
 
-    /*pub fn sort_quests(&mut self) {
-        let completed: Vec<bool> = match &self.global.player.quests.assigned {
-            Some(v) => {
-                v.iter()
-                    .map(|q| {
-                        let quest = self.quests.get(&q.clone()).unwrap().clone();
-                        quest.check(self)
-                    })
-                    .collect::<Vec<bool>>()
-            }
-            None => return
-        };
-
-        if completed.len() > 0 {
-            if let Some(v) = &mut self.global.player.quests.assigned {
-                for (i, q) in v.clone().iter().enumerate() {
-                    if completed[i] {
-                        v.retain(|s| s != &q.clone());
-
-                        println!("You have completed the quest \"{}\"!", self.quests.get(&q.clone()).unwrap().clone().name);
-                        
-                        if let Some(c) = &mut self.global.player.quests.completed {
-                            c.push(q.clone());
-                        } else {
-                            self.global.player.quests.completed = Some(vec![q.clone()]);
-                        }
-                    }
-                }
-            }
-        }
-    }*/
-
-    /*pub fn quest_list(&mut self, v: Option<Vec(Quest, String)>>) -> String {
-
-    }*/
-
     pub fn quest_list(&self, v: &Option<Vec<String>>) -> Option<Vec<(Quest, String)>> {
         match &v {
             Some(v) => {
@@ -236,5 +203,28 @@ impl GameData {
             self.display_quests(&self.quest_list(&self.global.player.quests.assigned), true),
             self.display_quests(&self.quest_list(&self.global.player.quests.completed), false)
         )
+    }
+
+    pub fn cycle_combat(&mut self) {
+        if let PlayerStatus::Combat(c) = &mut self.global.player.status {
+            c.turn = !c.turn;
+        }
+
+        if let Some(ef) = &mut self.global.player.vitality.effects {
+            for (_, v) in ef {
+                *v -= 1;
+            }
+        }
+        
+        if let Some(ef) = &mut self.global.player.vitality.effects {
+            ef.retain(|_, v| *v != 0);
+        }
+
+        if let Some(ef) = &self.global.player.vitality.effects {
+            for (e, _) in ef.clone() {
+                let effect = self.effects.get(&e).unwrap();
+                effect.cycle(&mut self.global.player);
+            }
+        }
     }
 }

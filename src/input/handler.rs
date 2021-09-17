@@ -100,6 +100,7 @@ pub fn handler(game: &mut GameData, input: &mut InputController) {
                     Err(e) => {
                         match cmd {
                             "dbg" => println!("\n{:#?}", game),
+                            "inv" => println!("\n{}", game.global.player.inventory.display_line(game)),
                             "log" => println!("\n{}", game.global.player.stats.log(false)),
                             "recent" => println!("\n{}", game.global.player.stats.log(true)),
                             "quest" => {

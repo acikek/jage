@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use super::attribute::{Class, Skill};
 use super::config::Config;
 use super::common::{InteractionLine, Named};
-use super::entity::{Player, PlayerStatus};
+use super::entity::{Entity, Player, PlayerStatus};
 use super::inventory::{Item, Currency, StatusEffect};
 use super::location::{Location, House};
 use super::quest::Quest;
@@ -26,6 +26,7 @@ pub struct GameData {
     pub config: Config,
     pub classes: HashMap<String, Class>,
     pub effects: HashMap<String, StatusEffect>,
+    pub entities: HashMap<String, Entity>,
     pub houses: HashMap<String, House>,
     pub items: HashMap<String, Item>,
     pub locations: HashMap<String, Location>,
@@ -39,6 +40,7 @@ impl GameData {
         let config = Filesystem::parse(fs.read("jage.yml")?)?;
         let classes = Filesystem::parse_map(fs.read_dir("classes")?)?;
         let effects = Filesystem::parse_map(fs.read_dir("effects")?)?;
+        let entities = Filesystem::parse_map(fs.read_dir("entities")?)?;
         let houses = Filesystem::parse_map(fs.read_dir("houses")?)?;
         let items = Filesystem::parse_map(fs.read_dir("items")?)?;
         let locations = Filesystem::parse_map(fs.read_dir("locations")?)?;
@@ -50,6 +52,7 @@ impl GameData {
             config,
             classes,
             effects,
+            entities,
             houses,
             items,
             locations,
@@ -206,24 +209,21 @@ impl GameData {
     }
 
     pub fn cycle_combat(&mut self) {
-        if let PlayerStatus::Combat(c) = &mut self.global.player.status {
-            c.turn = !c.turn;
-        }
-
-        if let Some(ef) = &mut self.global.player.vitality.effects {
-            for (_, v) in ef {
-                *v -= 1;
-            }
+        for (_, v) in &mut self.global.player.vitality.effects {
+            *v -= 1;
         }
         
-        if let Some(ef) = &mut self.global.player.vitality.effects {
-            ef.retain(|_, v| *v != 0);
+        self.global.player.vitality.effects.retain(|_, v| *v != 0);
+
+        for (e, _) in &self.global.player.vitality.effects.clone() {
+            let effect = self.effects.get(e).unwrap();
+            effect.cycle(&mut self.global.player);
         }
 
-        if let Some(ef) = &self.global.player.vitality.effects {
-            for (e, _) in ef.clone() {
-                let effect = self.effects.get(&e).unwrap();
-                effect.cycle(&mut self.global.player);
+        if let PlayerStatus::Combat(c) = &self.global.player.status.clone() {
+            for e in &c.entities {
+                let entity = self.entities.get(&e.base).unwrap();
+                entity.choose_attack().apply(&mut self.global.player);
             }
         }
     }

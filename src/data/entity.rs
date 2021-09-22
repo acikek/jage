@@ -1,17 +1,71 @@
+extern crate rand;
 extern crate serde;
 
 use std::collections::HashMap;
 
+use rand::distributions::{WeightedIndex, Distribution};
 use serde::{Deserialize, Serialize};
 
 use super::inventory::Inventory;
 use super::common::{InteractionType, Range};
 
+#[derive(Debug, Deserialize, Clone)]
+pub struct EntityAttack {
+    pub name: String,
+    pub strength: usize,
+    pub weight: u8,
+    pub effects: Option<HashMap<String, usize>>
+}
+
+impl EntityAttack {
+    pub fn apply(&self, player: &mut Player) {
+        player.vitality.health -= self.strength;
+
+        if let Some(m) = &self.effects {
+            for (e, n) in m.clone() {
+                if player.vitality.effects.contains_key(&e) {
+                    *player.vitality.effects.get_mut(&e).unwrap() += n;
+                } else {
+                    player.vitality.effects.insert(e.clone(), n);
+                }
+            }
+        }
+    }
+}
+
 #[derive(Debug, Deserialize)]
 pub struct Entity {
-    health: usize,
-    name: String,
-    inventory: Inventory,
+    pub health: usize,
+    pub name: String,
+    pub inventory: Inventory,
+    pub attacks: Vec<EntityAttack>
+}
+
+impl Entity {
+    pub fn choose_attack(&self) -> &EntityAttack {
+        let weights = self.attacks.iter()
+            .map(|a| a.weight)
+            .collect::<Vec<u8>>();
+
+        let dist = WeightedIndex::new(&weights).unwrap();
+        
+        &self.attacks[dist.sample(&mut rand::thread_rng())]
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct EntityInstance {
+    pub base: String,
+    pub health: Range
+}
+
+impl EntityInstance {
+    pub fn from(e: &Entity, base: String) -> Self {
+        EntityInstance {
+            base,
+            health: Range::new(e.health)
+        }
+    }
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -23,8 +77,7 @@ pub struct Character {
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct PlayerCombatData {
-    pub entities: HashMap<String, usize>,
-    pub turn: bool
+    pub entities: Vec<EntityInstance>
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -93,7 +146,7 @@ impl PlayerStats {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct PlayerVitality {
     pub health: Range,
-    pub effects: Option<HashMap<String, usize>>
+    pub effects: HashMap<String, usize>
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]

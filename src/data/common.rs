@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use super::super::input::controller::InputController;
 
 use super::data::GameData;
-use super::entity::Player;
+use super::entity::{Player, PlayerStatus, PlayerCombatData, EntityInstance};
 
 pub trait Named {
     fn name(&self) -> String;
@@ -22,6 +22,13 @@ pub struct Range {
 }   
 
 impl Range {
+    pub fn new(n: usize) -> Self {
+        Range { 
+            max: n,
+            value: n
+        }
+    }
+
     pub fn set(&mut self, value: isize) {
         if value > 0 {
             self.value += value as usize;
@@ -35,9 +42,21 @@ impl Range {
     }
 }
 
+impl AddAssign<usize> for Range {
+    fn add_assign(&mut self, value: usize) {
+        self.set(value as isize);
+    }
+}
+
 impl AddAssign<isize> for Range {
     fn add_assign(&mut self, value: isize) {
         self.set(value);
+    }
+}
+
+impl SubAssign<usize> for Range {
+    fn sub_assign(&mut self, value: usize) {
+        self.set(-(value as isize));
     }
 }
 
@@ -138,6 +157,12 @@ pub struct DynamicInteraction {
 }
 
 #[derive(Debug, Deserialize, Clone)]
+pub struct CombatInteraction {
+    pub lines: Vec<InteractionLine>,
+    pub engage: HashMap<String, usize>
+}
+
+#[derive(Debug, Deserialize, Clone)]
 pub struct DynamicChoice {
     pub response: String,
     pub interaction: InteractionType,
@@ -148,7 +173,8 @@ pub struct DynamicChoice {
 #[serde(rename_all = "snake_case")]
 pub enum InteractionType {
     Static(StaticInteraction),
-    Dynamic(DynamicInteraction)
+    Dynamic(DynamicInteraction),
+    Combat(CombatInteraction)
 }
 
 impl InteractionType {
@@ -191,6 +217,25 @@ impl InteractionType {
                     }
                     None => None
                 }
+            }
+            Combat(i) => {
+                let mut entities: Vec<EntityInstance> = Vec::new();
+
+                for (e, n) in &i.engage {
+                    let instance = EntityInstance::from(game.entities.get(e).unwrap(), e.clone());
+
+                    for _ in 0..*n {
+                        entities.push(instance.clone());
+                    }
+                }
+
+                let data = PlayerCombatData {
+                    entities
+                };
+
+                game.global.player.status = PlayerStatus::Combat(data);
+                
+                Some(InteractionLine::all(&i.lines))
             }
         }
     }

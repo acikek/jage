@@ -26,6 +26,8 @@ pub fn handler(game: &mut GameData, input: &mut InputController) {
 
                 let result = match &game.global.player.status {
                     Combat(c) => {
+                        game.cycle_combat();
+
                         match cmd {
                             _ => e
                         }
